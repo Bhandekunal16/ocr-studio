@@ -1,8 +1,24 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { ocrService, BackendHealthData, LanguageOption, PreprocessingOptions } from '../services/ocr.service';
-import { getInitialApiBaseUrl, updateApiBaseUrlConfig, API_BASE_URL_KEY } from '../services/api';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
+import {
+  ocrService,
+  BackendHealthData,
+  LanguageOption,
+  PreprocessingOptions,
+} from "../services/ocr.service";
+import {
+  getInitialApiBaseUrl,
+  updateApiBaseUrlConfig,
+  API_BASE_URL_KEY,
+} from "../services/api";
 
-export type OcrType = 'read' | 'document' | 'receipt' | 'table' | 'batch';
+export type OcrType = "read" | "document" | "receipt" | "table" | "batch";
 
 export interface HistoryItem {
   id: string;
@@ -11,16 +27,15 @@ export interface HistoryItem {
   filename: string;
   timestamp: number;
   confidence: number | null;
-  processingDuration?: number | null; // in seconds or ms
+  processingDuration?: number | null;
   success: boolean;
   errorMessage?: string;
   language?: string;
-  // Extracted text or structured result payload
   resultData?: any;
 }
 
 export interface BackendStatusState {
-  isOnline: boolean | null; // null = pending check
+  isOnline: boolean | null;
   statusText: string;
   ocrEngine?: string;
   workerCount?: number;
@@ -43,9 +58,9 @@ export interface AppPreferences {
 }
 
 interface AppContextType {
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
   toggleTheme: () => void;
-  setTheme: (t: 'light' | 'dark') => void;
+  setTheme: (t: "light" | "dark") => void;
 
   apiBaseUrl: string;
   setApiBaseUrl: (url: string) => Promise<boolean>;
@@ -60,7 +75,7 @@ interface AppContextType {
   fetchLanguages: () => Promise<void>;
 
   history: HistoryItem[];
-  addHistoryRecord: (record: Omit<HistoryItem, 'id' | 'timestamp'>) => void;
+  addHistoryRecord: (record: Omit<HistoryItem, "id" | "timestamp">) => void;
   deleteHistoryRecord: (id: string) => void;
   clearAllHistory: () => void;
 
@@ -75,16 +90,16 @@ interface AppContextType {
   };
 }
 
-const HISTORY_STORAGE_KEY = 'ocr_history_records_v1';
-const PREFERENCES_STORAGE_KEY = 'ocr_user_preferences_v1';
-const THEME_STORAGE_KEY = 'ocr_app_theme';
+const HISTORY_STORAGE_KEY = "ocr_history_records_v1";
+const PREFERENCES_STORAGE_KEY = "ocr_user_preferences_v1";
+const THEME_STORAGE_KEY = "ocr_app_theme";
 
 const defaultPrefs: AppPreferences = {
-  defaultLanguage: 'eng',
-  preprocess: false,
-  grayscale: false,
-  normalize: false,
-  sharpen: false,
+  defaultLanguage: "eng",
+  preprocess: true,
+  grayscale: true,
+  normalize: true,
+  sharpen: true,
   contrast: 0,
   rotate: 0,
   threshold: 0,
@@ -92,28 +107,31 @@ const defaultPrefs: AppPreferences = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   // Theme state
-  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+  const [theme, setThemeState] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    if (saved === 'dark' || saved === 'light') return saved;
-    return 'light'; // Light theme by default as per guidelines
+    if (saved === "dark" || saved === "light") return saved;
+    return "light"; // Light theme by default as per guidelines
   });
 
   // Base API URL state
-  const [apiBaseUrl, setApiBaseUrlState] = useState<string>(getInitialApiBaseUrl);
+  const [apiBaseUrl, setApiBaseUrlState] =
+    useState<string>(getInitialApiBaseUrl);
 
   // Backend Health
   const [backendHealth, setBackendHealth] = useState<BackendStatusState>({
     isOnline: null,
-    statusText: 'Connecting...',
+    statusText: "Connecting...",
     lastChecked: null,
     isChecking: false,
   });
 
   // Languages
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
-  const [defaultLanguage, setDefaultLanguage] = useState<string>('eng');
+  const [defaultLanguage, setDefaultLanguage] = useState<string>("eng");
   const [isLoadingLanguages, setIsLoadingLanguages] = useState<boolean>(false);
   const [languagesError, setLanguagesError] = useState<string | null>(null);
 
@@ -125,7 +143,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return JSON.parse(saved);
       }
     } catch (e) {
-      console.error('Failed to parse OCR history from localStorage', e);
+      console.error("Failed to parse OCR history from localStorage", e);
     }
     return [];
   });
@@ -138,7 +156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { ...defaultPrefs, ...JSON.parse(saved) };
       }
     } catch (e) {
-      console.error('Failed to load user preferences', e);
+      console.error("Failed to load user preferences", e);
     }
     return defaultPrefs;
   });
@@ -146,19 +164,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Apply theme class to <html>
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
+    if (theme === "dark") {
+      root.classList.add("dark");
     } else {
-      root.classList.remove('dark');
+      root.classList.remove("dark");
     }
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setThemeState((prev) => (prev === "light" ? "dark" : "light"));
   };
 
-  const setTheme = (newTheme: 'light' | 'dark') => {
+  const setTheme = (newTheme: "light" | "dark") => {
     setThemeState(newTheme);
   };
 
@@ -187,8 +205,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const healthData = res.data || (res as any);
       setBackendHealth({
         isOnline: true,
-        statusText: healthData?.status || 'Online',
-        ocrEngine: healthData?.ocrEngine || healthData?.engine || 'Active',
+        statusText: healthData?.status || "Online",
+        ocrEngine: healthData?.ocrEngine || healthData?.engine || "Active",
         workerCount: healthData?.workerCount ?? healthData?.workers,
         uptime: healthData?.uptime,
         lastChecked: Date.now(),
@@ -199,9 +217,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err: any) {
       setBackendHealth({
         isOnline: false,
-        statusText: 'Offline',
+        statusText: "Offline",
         lastChecked: Date.now(),
-        error: err?.message || 'Failed to connect to backend',
+        error: err?.message || "Failed to connect to backend",
         isChecking: false,
       });
     }
@@ -217,7 +235,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const res = await ocrService.checkHealth();
         setBackendHealth({
           isOnline: true,
-          statusText: res.data?.status || 'Online',
+          statusText: res.data?.status || "Online",
           ocrEngine: res.data?.ocrEngine,
           workerCount: res.data?.workerCount,
           uptime: res.data?.uptime,
@@ -229,15 +247,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (err: any) {
         setBackendHealth({
           isOnline: false,
-          statusText: 'Unreachable',
+          statusText: "Unreachable",
           lastChecked: Date.now(),
-          error: err?.message || 'Connection test failed',
+          error: err?.message || "Connection test failed",
           isChecking: false,
         });
         return false;
       }
     },
-    []
+    [],
   );
 
   // Fetch languages
@@ -251,7 +269,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Format normalized languages list
         const rawLangs = data.languages;
         const normalized: LanguageOption[] = rawLangs.map((item) => {
-          if (typeof item === 'string') {
+          if (typeof item === "string") {
             return { code: item, name: item.toUpperCase() };
           }
           return {
@@ -268,7 +286,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     } catch (err: any) {
-      setLanguagesError(err?.message || 'Failed to load supported languages');
+      setLanguagesError(err?.message || "Failed to load supported languages");
     } finally {
       setIsLoadingLanguages(false);
     }
@@ -276,7 +294,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // History management
   const addHistoryRecord = useCallback(
-    (record: Omit<HistoryItem, 'id' | 'timestamp'>) => {
+    (record: Omit<HistoryItem, "id" | "timestamp">) => {
       setHistory((prev) => {
         const newItem: HistoryItem = {
           ...record,
@@ -289,14 +307,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
         } catch (e) {
-          console.warn('LocalStorage quota warning, trimming history further', e);
+          console.warn(
+            "LocalStorage quota warning, trimming history further",
+            e,
+          );
           const trimmed = updated.slice(0, 30);
           localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(trimmed));
         }
         return updated;
       });
     },
-    []
+    [],
   );
 
   const deleteHistoryRecord = useCallback((id: string) => {
@@ -323,8 +344,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     for (const item of history) {
       if (item.success) {
         successful++;
-        if (typeof item.confidence === 'number' && !isNaN(item.confidence) && item.confidence > 0) {
-          totalConf += item.confidence <= 1 ? item.confidence * 100 : item.confidence;
+        if (
+          typeof item.confidence === "number" &&
+          !isNaN(item.confidence) &&
+          item.confidence > 0
+        ) {
+          totalConf +=
+            item.confidence <= 1 ? item.confidence * 100 : item.confidence;
           confCount++;
         }
       } else {
@@ -332,7 +358,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    const averageConfidence = confCount > 0 ? parseFloat((totalConf / confCount).toFixed(1)) : 0;
+    const averageConfidence =
+      confCount > 0 ? parseFloat((totalConf / confCount).toFixed(1)) : 0;
 
     return {
       totalProcessed,
@@ -380,7 +407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 export function useApp() {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
+    throw new Error("useApp must be used within an AppProvider");
   }
   return context;
 }
