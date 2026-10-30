@@ -1,0 +1,6 @@
+{
+  "name": "OCR Image Reader",
+  "description": "Production-grade OCR web application for text recognition, document parsing, receipt extraction, table structure detection, and batch processing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
